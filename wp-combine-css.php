@@ -56,7 +56,7 @@ $wp_combine_css->set_plugin_path( dirname( __FILE__ ) );
 
 $wp_combine_css->set_plugin_url( plugin_dir_url(__FILE__) );
 
-// call setup
+// call init
 
 $wp_combine_css->init();
 
