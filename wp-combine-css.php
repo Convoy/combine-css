@@ -1,14 +1,14 @@
 <?php
 /*
 Plugin Name: WP Combine CSS Plugin
-Plugin URI: http://www.category4.com
-Description: Combine and minify CSS and attempt to preserve image paths in the process.
-Author: Category 4
-Version: 0.1
+Plugin URI: http://www.weareconvoy.com
+Description: WordPress plugin that attempts to combine, minify, and compress CSS while preserving image/font paths in the process.
+Author: Convoy
+Version: 0.11
 Author: Tim McDaniels
 Author URI: http://www.category4.com
 Requires at least: 3.0.0
-Tested up to: 3.2
+Tested up to: 3.4.2
 
 Copyright 2010-2011 by Tim McDaniels http://www.category4.com
 
@@ -31,23 +31,7 @@ Foundation,Inc.,51 Franklin St,Fifth Floor,Boston,MA 02110-1301 USA
 
 // don't allow direct access of this file
 
-if ( preg_match( '#'.basename(__FILE__).'#', $_SERVER['PHP_SELF'] ) ) die();
-
-// increase memory
-
-ini_set( 'memory_limit', '150M' );
-
-// define plugin file path
-
-define( 'WPCCP_PLUGIN_FILE', __FILE__ );
-
-// define directory name of plugin
-
-define( 'WPCCP_PLUGIN_DIR', basename( dirname( WPCCP_PLUGIN_FILE ) ) );
-
-// path to this plugin
-
-define( 'WPCCP_PLUGIN_PATH', dirname( __FILE__ ) );
+if ( preg_match( '#' . basename( __FILE__ ) . '#', $_SERVER['PHP_SELF'] ) ) die();
 
 // require base objects and do instantiation
 
@@ -55,5 +39,25 @@ if ( !class_exists( 'WPCombineCSS' ) ) {
         require_once( dirname( __FILE__ ) . '/classes/combine-css.php' );
 }
 $wp_combine_css = new WPCombineCSS();
+
+// define plugin file path
+
+$wp_combine_css->set_plugin_file( __FILE__ );
+
+// define directory name of plugin
+
+$wp_combine_css->set_plugin_dir( basename( dirname( __FILE__ ) ) );
+
+// path to this plugin
+
+$wp_combine_css->set_plugin_path( dirname( __FILE__ ) );
+
+// URL to plugin
+
+$wp_combine_css->set_plugin_url( plugin_dir_url(__FILE__) );
+
+// call setup
+
+$wp_combine_css->init();
 
 ?>

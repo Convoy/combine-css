@@ -7,6 +7,12 @@ class WPCombineCSS {
         */
         const version = '0.1';
 	const nspace = 'wpccp';
+	const pname = 'Combine CSS';
+        protected $_plugin_file;
+        protected $_plugin_dir;
+        protected $_plugin_path;
+        protected $_plugin_url;
+
 	var $cachetime = '';
 	var $css_domain = '';
 	var $create_cache = false;
@@ -26,15 +32,30 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function __construct() {
+        function __construct() {}
 
-                // settings data -- leave at top of constructor
+	/**
+        *Init function
+        *
+        *@return void
+        *@since 0.1
+        */
+        function init() {
+
+                // settings data
 
                 $this->settings_data = unserialize( get_option( self::nspace . '-settings' ) );
 		$this->cachetime = $this->get_settings_value( 'cachetime' );
 		if ( ! @strlen( $this->cachetime ) ) $this->cachetime = 300;
 		$this->css_domain = $this->get_settings_value( 'css_domain' );
 		if ( ! @strlen( $this->css_domain ) ) $this->css_domain = get_option( 'siteurl' );
+
+		// add ignore files
+
+		$ignore_list = explode( "\n", $this->settings_data['ignore_files'] );
+		foreach ( $ignore_list as $item ) {
+			$this->css_files_ignore[] = $item;
+		}
 
 		// set file path and uri
 
@@ -71,7 +92,16 @@ class WPCombineCSS {
                                                                         'label' => __( 'Username and Password (if behind htaccess authentication -- syntax: username:password)', self::nspace ),
                                                                         'type' => 'text',
                                                                         'default' => 'username:password'
-                                                                        )
+                                                                        ),
+							'add_gf_css' => array(
+									'label' => __( 'Add Gravity Forms CSS', self::nspace ),
+									'type' => 'select',
+									'values' => array( 'No' => 'No', 'Yes' => 'Yes' )
+									),
+							'ignore_files' => array(
+									'label' => __( 'CSS Files to Ignore (one per line)', self::nspace ),	
+									'type' => 'textarea'
+									)
 						);
 		}
 		elseif ( strstr( $_SERVER['REQUEST_URI'], 'wp-login' ) || strstr( $_SERVER['REQUEST_URI'], 'gf_page=' ) || strstr( $_SERVER['REQUEST_URI'], 'preview=' ) ) {}
@@ -154,6 +184,12 @@ class WPCombineCSS {
                 $this->css_uri = $this->wpccp_uri . $file_name . '.css';
                 $this->css_path_tmp = $this->css_path . '.tmp';
 
+		// add gravity forms css, if told to
+
+		if ( $this->settings_data['add_gf_css'] == 'Yes' ) {
+			$this->css_handles_found['/wp-content/plugins/gravityforms/css/forms.css']['css_file'] = $this->get_file_from_src( '/wp-content/plugins/gravityforms/css/forms.css' );
+		}
+
                 if ( $this->css_handles_found[$css_src] ) {}
                 else return $src;
         }
@@ -194,10 +230,28 @@ class WPCombineCSS {
 
 					// change path to images
 
-					$content .= "/* $css_src */\n" . $this->compress( str_replace( 
-						array( 'url(images/', "url('images/" ), 
-						array( 'url(/' . dirname( $css_src ) . '/images/', 'url(\'/' . dirname( $css_src ) . '/images/' ), 
-						$css_content ) ) . "\n";
+					$css_content = str_replace(
+									array( 
+										'url(images/',
+										"url('images/",
+										'url("images/',
+										'url(fonts/',
+										"url('fonts/",
+										'url("fonts/'
+									),
+									array( 
+										'url(/' . dirname( $css_src ) . '/images/',
+										'url(\'/' . dirname( $css_src ) . '/images/',
+										'url("/' . dirname( $css_src ) . '/images/',
+										'url(/' . dirname( $css_src ) . '/fonts/',
+                                                                                'url(\'/' . dirname( $css_src ) . '/fonts/',
+                                                                                'url("/' . dirname( $css_src ) . '/fonts/'
+									), 
+									$css_content
+								);
+
+					$content .= "/* $css_src */\n" . $this->compress( $css_content ) . "\n";
+					unset( $css_content );
 
 				}
 
@@ -220,7 +274,7 @@ class WPCombineCSS {
         *@return boolean
         *@since 0.1
         */
-	function file_exists ( $src ) {
+	function file_exists( $src ) {
 		if ( @strlen( $src ) && file_exists( ABSPATH . $src ) ) return true;
 		return false;
 	}
@@ -231,7 +285,7 @@ class WPCombineCSS {
         *@return string
         *@since 0.1
         */
-	function get_file_from_src ( $src ) {
+	function get_file_from_src( $src ) {
 		$frags = explode( '/', $src );
 		return $frags[count( $frags ) -1];
 	}
@@ -242,7 +296,7 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function cache_content ( $content ) {
+        function cache_content( $content ) {
                 $this->debug( 'Function cache_content' );
                 if ( @strlen( $content ) ) {
 			$this->cache( 'css_path_tmp', $content );
@@ -255,7 +309,7 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function cache ( $tmp_file, $content ) {
+        function cache( $tmp_file, $content ) {
                 if ( ! file_exists( $this->$tmp_file ) ) {
                         $fp = fopen( $this->$tmp_file, "w" );
 			$this->debug( $this->$tmp_file . ' created' );
@@ -273,7 +327,7 @@ class WPCombineCSS {
         *@return string
         *@since 0.1
         */
-	function curl_file_get_contents ( $src ) {
+	function curl_file_get_contents( $src ) {
                 $url = trim( $src );
 		$url = preg_replace( "/http(|s):\/\//", "http://" . $this->get_settings_value( 'htaccess_user_pw' ) . "@", $url );
                 $c = curl_init();
@@ -284,7 +338,7 @@ class WPCombineCSS {
                 curl_setopt( $c, CURLOPT_SSL_VERIFYPEER, false );
                 curl_setopt( $c, CURLOPT_SSL_VERIFYHOST, false );
                 if( count( $header ) ) {
-                        curl_setopt ( $c, CURLOPT_HTTPHEADER, $header );
+                        curl_setopt( $c, CURLOPT_HTTPHEADER, $header );
                 }
                 $contents = curl_exec( $c );
                 curl_close( $c );
@@ -325,9 +379,9 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function add_settings_page () {
+        function add_settings_page() {
                 if ( current_user_can( 'manage_options' ) ) {
-                        add_options_page( 'Combine CSS', 'Combine CSS', 'manage_options', 'wpccp-settings', array( &$this, 'settings_page' ) );
+                        add_options_page( self::pname, self::pname, 'manage_options', 'wpccp-settings', array( &$this, 'settings_page' ) );
                 }
         }
 
@@ -337,7 +391,7 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function settings_page () {
+        function settings_page() {
                 if($_POST['wpccp_update_settings']) {
                         $this->update_settings();
                 }
@@ -350,14 +404,14 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function show_settings_form () {
+        function show_settings_form() {
 
                 echo '
         <div class="wrap">
                 <div id="icon-options-general" class="icon32">
                         <br/>
                 </div>
-                <h2>Combine CSS Settings</h2>
+                <h2>' . self::pname . ' Settings</h2>
 		<p>Updating settings will remove all files cached on the filesystem.</p>
 ';
                 if ( $_POST['wpccp_update_settings'] ) {
@@ -426,7 +480,7 @@ class WPCombineCSS {
 # BEGIN CSS Compression
 &lt;FilesMatch "\.(css)"&gt;
 ForceType application/x-httpd-php
-php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
+php_value auto_prepend_file "' . $this->get_plugin_path() . '/includes/gzip-css.php"
 &lt;/FilesMatch&gt;
 
 # END CSS Compression
@@ -452,7 +506,7 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         *@return void
         *@since 0.1
         */
-        function delete_settings () {
+        function delete_settings() {
                 delete_option( $this->option_key );
         }
 
@@ -462,7 +516,7 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         *@return string
         *@since 0.1
         */
-        function is_assoc ( $arr ) {
+        function is_assoc( $arr ) {
                 if ( isset ( $arr[0] ) ) return false;
                 return true;
         }
@@ -476,7 +530,7 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         function select_field( $name, $values, $value, $use_label = false, $default_value = '', $custom_label = '' ) {
                 ob_start();
                 $label = '-- please make a selection --';
-                if (@strlen($custom_label)) {
+                if ( @strlen( $custom_label ) ) {
                         $label = $custom_label;
                 }
 
@@ -511,7 +565,7 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         *@return void
         *@since 0.1
         */
-        function update_settings () {
+        function update_settings() {
                 $data = array();
                 foreach( $this->settings_fields as $key => $val ) {
                         if( $val['type'] != 'legend' ) {
@@ -528,7 +582,7 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         *@return void
         *@since 0.1
         */
-        function set_settings ( $data ) {
+        function set_settings( $data ) {
                 update_option( self::nspace . '-settings', serialize( $data ) );
                 $this->settings_data = $data;
         }
@@ -539,12 +593,92 @@ php_value auto_prepend_file "' . WPCCP_PLUGIN_PATH . '/includes/gzip-css.php"
         *@return void
         *@since 0.1
         */
-	function delete_cache () {
+	function delete_cache() {
 		@unlink( $this->css_path );
                 if ( function_exists( 'wp_cache_clear_cache' ) ) {
                         wp_cache_clear_cache();
                 }
 	}
+
+        /**
+        *Set plugin file
+        *
+        *@return void
+        *@since 0.1
+        */
+        function set_plugin_file( $plugin_file ) {
+                $this->_plugin_file = $plugin_file;
+        }
+
+        /**
+        *Get plugin file
+        *
+        *@return string
+        *@since 0.1
+        */
+        function get_plugin_file() {
+                return $this->_plugin_file;
+        }
+
+        /**
+        *Set plugin directory
+        *
+        *@return void
+        *@since 0.1
+        */
+        function set_plugin_dir( $plugin_dir ) {
+                $this->_plugin_dir = $plugin_dir;
+        }
+
+        /**
+        *Get plugin directory
+        *
+        *@return string
+        *@since 0.1
+        */
+        function get_plugin_dir() {
+                return $this->_plugin_dir;
+        }
+
+        /**
+        *Set plugin file path
+        *
+        *@return void
+        *@since 0.1
+        */
+        function set_plugin_path( $plugin_path ) {
+                $this->_plugin_path = $plugin_path;
+        }
+
+        /**
+        *Get plugin file path
+        *
+        *@return string
+        *@since 0.1
+        */
+        function get_plugin_path() {
+                return $this->_plugin_path;
+        }
+
+	/**
+        *Set plugin URL
+        *
+        *@return void
+        *@since 0.1
+        */
+        function set_plugin_url( $plugin_url ) {
+                $this->_plugin_url = $plugin_url;
+        }
+
+        /**
+        *Get plugin URL
+        *
+        *@return string
+        *@since 0.1
+        */
+        function get_plugin_url() {
+                return $this->_plugin_url;
+        }
 
 }
 
