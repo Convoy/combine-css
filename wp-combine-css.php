@@ -6,11 +6,11 @@ Description: WordPress plugin that attempts to combine, minify, and compress CSS
 Author: Convoy
 Version: 0.11
 Author: Tim McDaniels
-Author URI: http://www.category4.com
+Author URI: http://www.weareconvoy.com
 Requires at least: 3.0.0
 Tested up to: 3.4.2
 
-Copyright 2010-2011 by Tim McDaniels http://www.category4.com
+Copyright 2010-2011 by Tim McDaniels http://www.weareconvoy.com
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
