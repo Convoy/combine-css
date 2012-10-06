@@ -50,6 +50,10 @@ class WPCombineCSS {
 		$this->css_domain = $this->get_settings_value( 'css_domain' );
 		if ( ! @strlen( $this->css_domain ) ) $this->css_domain = get_option( 'siteurl' );
 
+                // set debugging
+
+                if ( $this->settings_data['debug'] == 'Yes' ) $this->debug = true;
+
 		// add ignore files
 
 		$ignore_list = explode( "\n", $this->settings_data['ignore_files'] );
@@ -101,7 +105,12 @@ class WPCombineCSS {
 							'ignore_files' => array(
 									'label' => __( 'CSS Files to Ignore (one per line)', self::nspace ),	
 									'type' => 'textarea'
-									)
+									),
+                                                        'debug' => array(
+                                                                        'label' => __( 'Turn on debugging?', self::nspace ),
+                                                                        'type' => 'select',
+                                                                        'values' => array( 'No' => 'No', 'Yes' => 'Yes' )
+                                                                        )
 						);
 		}
 		elseif ( strstr( $_SERVER['REQUEST_URI'], 'wp-login' ) || strstr( $_SERVER['REQUEST_URI'], 'gf_page=' ) || strstr( $_SERVER['REQUEST_URI'], 'preview=' ) ) {}
@@ -171,12 +180,12 @@ class WPCombineCSS {
 		if ( ! in_array( $css_file, $this->css_files_ignore ) ) {
 			$this->debug( '     -> found ' . $css_src );
 			$this->css_handles_found[$css_src]['css_file'] = $css_file;
-			$this->css_get_str[$css_src] = $matches[2] . $matches[5];
+			$this->css_handles_found[$css_src]['css_src'] = $matches[2] . $matches[5];
 		}
 
                 // get name of file based on md5 hash of js handles
 
-                $file_name = self::nspace . '-' . md5( @implode( '', array_keys( $this->css_handles_found ) ) . @implode( '', @array_values( $this->css_get_str ) ) );
+                $file_name = self::nspace . '-' . md5( @implode( '', array_keys( $this->css_handles_found ) ) );
 
                 // paths to wpccp css
 
@@ -221,8 +230,8 @@ class WPCombineCSS {
 					// if file is a PHP script, pull content via curl
 
 					if ( preg_match( "/\.php/", $css_src ) ) {
-						$css_content = $this->curl_file_get_contents ( $this->css_get_str[$css_src] );
-						$css_src = $this->css_get_str[$css_src];
+						$css_content = $this->curl_file_get_contents ( $this->css_handles_found[$css_src]['css_src'] );
+						$css_src = $this->css_handles_found[$css_src]['css_src'];
 					}
 					else {
 						$css_content = file_get_contents( ABSPATH . $css_src );
@@ -404,90 +413,8 @@ class WPCombineCSS {
         *@return void
         *@since 0.1
         */
-        function show_settings_form() {
-
-                echo '
-        <div class="wrap">
-                <div id="icon-options-general" class="icon32">
-                        <br/>
-                </div>
-                <h2>' . self::pname . ' Settings</h2>
-		<p>Updating settings will remove all files cached on the filesystem.</p>
-';
-                if ( $_POST['wpccp_update_settings'] ) {
-                        echo '
-                <div class="updated settings-error" id="setting-error-settings_updated"><p><strong>Settings saved.</strong></p></div>
-';
-                }
-                echo '
-                <form method="post">
-                        <table class="form-table">
-';
-
-                foreach ( $this->settings_fields as $key => $val ) {
-                        echo '
-                                <tr valign="top">';
-                        if ( $val['type'] == 'legend' ) {
-                                echo '
-                                        <th colspan="2" class="legend" scope="row"><strong>' . $val['label'] . '</strong></th>
-';
-                        }
-                        else {
-                                echo '
-                                        <th scope="row"><label for="' . $key . '">' . $val['label'] . '</label></th>
-                                        <td>
-';
-                                if( $val['type'] == 'money') echo '<span class="dollar-sign">$</span> ';
-                                if( $val['type'] == 'money' || $val['type'] == 'text' || $val['type'] == 'password' ) {
-                                        if ( $val['type'] == 'money' ) $val['type'] = 'text';
-					$value = $this->get_settings_value( $key );
-					if ( ! @strlen( $value ) ) $value = $val['default'];
-                                        echo '
-                                        <input name="' . $key . '" type="' . $val['type'] . '" id="' . $key . '" value="' . stripslashes( htmlspecialchars( $value ) ) . '" class="regular-text" />
-';
-                                }
-                                elseif ( $val['type'] == 'select' ) {
-					$value = $this->get_settings_value( $key );
-					if ( ! @strlen( $value ) ) $value = $val['default'];
-                                        echo $this->select_field( $key, $val['values'], $value );
-                                }
-                                elseif($val['type'] == 'textarea') {
-                                        echo '<textarea name="' . $key . '" id="' . $key . '">' . stripslashes( htmlspecialchars( $this->get_settings_value( $key ) ) ) . '</textarea>';
-                                }
-				else {
-
-				}
-                                if($val['description']) {
-                                        echo '
-                                                <span class="description">' . $val['description'] . '</span>
-';
-                                }
-                                echo '
-                                        </td>';
-                        }
-                        echo '
-                                </tr>';
-                }
-
-                echo '
-                        </table>
-                        <input type="hidden" name="wpccp_update_settings" value="1" />
-                        <p class="submit"><input type="submit" value="Save Changes" class="button-primary" id="submit" name="submit"></p>
-                </form>
-
-                <p><strong><span style="color:red">Note: </span>You can also add GZIP compression for CSS files by adding the lines below to your .htaccess file</strong></p>
-                <pre>
-# BEGIN CSS Compression
-&lt;FilesMatch "\.(css)"&gt;
-ForceType application/x-httpd-php
-php_value auto_prepend_file "' . $this->get_plugin_path() . '/includes/gzip-css.php"
-&lt;/FilesMatch&gt;
-
-# END CSS Compression
-                </pre>
-
-        </div>
-';
+        function show_settings_form () {
+                include( $this->get_plugin_path() . '/views/admin_settings_form.php' );
         }
 
         /**
