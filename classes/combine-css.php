@@ -61,6 +61,10 @@ class WPCombineCSS {
 			$this->css_files_ignore[] = $item;
 		}
 
+                // set compress
+
+                if ( ! $this->settings_data['compress'] ) $this->settings_data['compress'] = 'Yes';
+
 		// set file path and uri
 
 		$upload_dir = wp_upload_dir();
@@ -78,38 +82,49 @@ class WPCombineCSS {
 
 			$this->settings_fields = array(
 							'legend_1' => array(
-									'label' => __( 'General Settings', self::nspace ),
+									'label' => 'General Settings',
 									'type' => 'legend'
 									),
 							'css_domain' => array(
-									'label' => __( 'CSS Domain', self::nspace ),
+									'label' => 'CSS Domain',
 									'type' => 'text',
 									'default' => get_option( 'siteurl' )
 									),
 							'cachetime' => array(
-									'label' => __( 'Cache Expiration', self::nspace ),
+									'label' => 'Cache Expiration',
+                                                                        'instruction' => 'How often to refresh CSS files in seconds.',
 									'type' => 'select',
 									'values' => array( '60' => '1 minute', '300' => '5 minutes', '900' => '15 minutes', '1800' => '30 minutes', '3600' => '1 hour' ),
 									'default' => '300'
 									),
 							'htaccess_user_pw' => array(
-                                                                        'label' => __( 'Username and Password (if behind htaccess authentication -- syntax: username:password)', self::nspace ),
+                                                                        'label' => 'Username and Password',
+                                                                        'instruction' => 'Use when site is accessed behind htaccess authentication -- syntax: username:password.',
                                                                         'type' => 'text',
                                                                         'default' => 'username:password'
                                                                         ),
 							'add_gf_css' => array(
-									'label' => __( 'Add Gravity Forms CSS', self::nspace ),
+									'label' => 'Add Gravity Forms CSS',
 									'type' => 'select',
-									'values' => array( 'No' => 'No', 'Yes' => 'Yes' )
+									'values' => array( 'No' => 'No', 'Yes' => 'Yes' ),
+                                                                        'default' => 'No'
 									),
 							'ignore_files' => array(
-									'label' => __( 'CSS Files to Ignore (one per line)', self::nspace ),	
+									'label' => 'CSS Files to Ignore',
+                                                                        'instruction' => 'Enter one per line. Only use the name of the CSS file (like style.css). You can be more specific about what CSS file to ignore by specifying the plugin and then the CSS file (like plugin:style.css).',	
 									'type' => 'textarea'
 									),
-                                                        'debug' => array(
-                                                                        'label' => __( 'Turn on debugging?', self::nspace ),
+                                                        'compress' => array(
+                                                                        'label' => 'GZip Compress CSS output?',
                                                                         'type' => 'select',
-                                                                        'values' => array( 'No' => 'No', 'Yes' => 'Yes' )
+                                                                        'values' => array( 'No' => 'No', 'Yes' => 'Yes' ),
+                                                                        'default' => 'Yes'
+                                                                        ),
+                                                        'debug' => array(
+                                                                        'label' => 'Turn on debugging?',
+                                                                        'type' => 'select',
+                                                                        'values' => array( 'No' => 'No', 'Yes' => 'Yes' ),
+                                                                        'default' => 'No'
                                                                         )
 						);
 		}
@@ -175,12 +190,25 @@ class WPCombineCSS {
                 $css_src = $this->strip_domain( $matches[2] );
                 $css_file = $this->get_file_from_src( $css_src );
 
-		// save all the scripts that we've gathered
+                // get context (plugin or theme)
 
-		if ( ! in_array( $css_file, $this->css_files_ignore ) ) {
+                // wp-content/themes/convoy-theme/style.css
+                preg_match( "/(plugins|themes)\/(.*)\/.*/", $css_src, $cmatches );
+                $context = '';
+                if ( $cmatches ) {
+                        $context = $cmatches[2];
+                        if ( strstr( $context, '/' ) ) $context = dirname( $cmatches[2] );
+                }
+                $this->debug( '     -> context ' . $context );
+
+		if ( ! in_array( $context . ':' . $css_file, $this->css_files_ignore ) && ! in_array( $css_file, $this->css_files_ignore ) ) {
+
+                        // save all the scripts that we've gathered
+
 			$this->debug( '     -> found ' . $css_src );
 			$this->css_handles_found[$css_src]['css_file'] = $css_file;
 			$this->css_handles_found[$css_src]['css_src'] = $matches[2] . $matches[5];
+                        $this->css_handles_found[$css_src]['context'] = $context;
 		}
 
                 // get name of file based on md5 hash of js handles
@@ -190,7 +218,9 @@ class WPCombineCSS {
                 // paths to wpccp css
 
                 $this->css_path = $this->wpccp_path . $file_name . '.css';
+                if ( $this->settings_data['compress'] == 'Yes' ) $this->css_path .= '.php';
                 $this->css_uri = $this->wpccp_uri . $file_name . '.css';
+                if ( $this->settings_data['compress'] == 'Yes' ) $this->css_uri .= '.php';
                 $this->css_path_tmp = $this->css_path . '.tmp';
 
 		// add gravity forms css, if told to
@@ -259,7 +289,7 @@ class WPCombineCSS {
 									$css_content
 								);
 
-					$content .= "/* $css_src */\n" . $this->compress( $css_content ) . "\n";
+					$content .= $this->compress( $css_content );
 					unset( $css_content );
 
 				}
@@ -323,6 +353,10 @@ class WPCombineCSS {
                         $fp = fopen( $this->$tmp_file, "w" );
 			$this->debug( $this->$tmp_file . ' created' );
                         if ( flock( $fp, LOCK_EX ) ) { // do an exclusive lock
+                                if ( $this->settings_data['compress'] == 'Yes' ) {
+                                        $content = '<?php if(extension_loaded("zlib")){ob_start("ob_gzhandler");} header("Content-type: text/css"); ?>' .
+                                                $content . '<?php if(extension_loaded("zlib")){ob_end_flush();}?>';
+                                }
                                 fwrite( $fp, $content );
                                 flock( $fp, LOCK_UN ); // release the lock
                         }

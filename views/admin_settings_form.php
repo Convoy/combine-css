@@ -11,7 +11,7 @@
 <?php if ( $val['type'] == 'legend' ): ?>
                             <th colspan="2" class="legend" scope="row"><strong><?php echo __( $val['label'], self::nspace ); ?></strong></th>
 <?php else: ?>
-                            <th scope="row"><label for="<?php echo $key; ?>"><?php echo __( $val['label'], self::nspace ); ?></label></th>
+                            <th scope="row"><label for="<?php echo $key; ?>"><?php echo __( $val['label'], self::nspace ); ?></label><?php if ( $val['instruction'] ): ?><br><em><?php echo __( $val['instruction'], self::nspace ); ?></em><?php endif; ?></th>
                             <td>
 <?php if( $val['type'] == 'money'): ?>
                                 <span class="dollar-sign">$</span>
@@ -30,7 +30,7 @@
 ?>
                                 <?php echo $this->select_field( $key, $val['values'], $value ); ?>
 <?php elseif( $val['type'] == 'textarea' ): ?>
-                                <textarea name="<?php echo $key; ?>" id="<?php echo $key; ?>"><?php echo stripslashes( htmlspecialchars( $this->get_settings_value( $key ) ) ); ?></textarea>
+                                <textarea class="regular-text" cols="60" rows="10" name="<?php echo $key; ?>" id="<?php echo $key; ?>"><?php echo stripslashes( htmlspecialchars( $this->get_settings_value( $key ) ) ); ?></textarea>
 <?php endif; ?>
 <?php if($val['description']): ?>
                                 <span class="description"><?php echo $val['description']; ?></span>
@@ -43,15 +43,4 @@
                     <input type="hidden" name="<?php echo self::nspace; ?>_update_settings" value="1" />
                     <p class="submit"><input type="submit" value="Save Changes" class="button-primary" id="submit" name="submit"></p>
                 </form>
-                <p><strong><span style="color:red">Note: </span>You can also add GZIP compression for CSS files by adding the lines below to your .htaccess file</strong></p>
-                <pre>
-# BEGIN CSS Compression
-&lt;FilesMatch "\.(css)"&gt;
-php_value short_open_tag 0
-ForceType application/x-httpd-php
-php_value auto_prepend_file "<?php echo $this->get_plugin_path(); ?>/includes/gzip-css.php"
-&lt;/FilesMatch&gt;
-
-# END CSS Compression
-                </pre>
             </div>

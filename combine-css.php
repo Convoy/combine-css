@@ -2,7 +2,7 @@
 /*
 Plugin Name: WP Combine CSS Plugin
 Plugin URI: http://www.weareconvoy.com
-Description: WordPress plugin that attempts to combine, minify, and compress CSS while preserving image/font paths in the process.
+Description: WordPress plugin that combines, minifies, and compresses CSS files
 Author: Convoy
 Version: 0.11
 Author: Tim McDaniels

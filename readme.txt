@@ -12,9 +12,16 @@ WordPress plugin that combines, minifies, and compresses CSS files
 
 == Description ==
 
+WordPress plugin that combines, minifies, and compresses CSS files. The CSS files that this plugin combines and minifies must be enqueued by using wp_enqueue_style. The plugin combines and minifies CSS and writes the output into files in the uploads directory and makes attempts to correct paths for images and fonts.
+
 Features include:
 
-* settings page to exclude certain CSS files
+* option to change the CSS domain if a CDN is used
+* option to change how often CSS files get refreshed
+* option to exclude certain CSS files from combining
+* option to turn on/off gzip compression
+* option to include Gravity Forms CSS (this is due to Gravity Forms not using wp_enqueue_style)
+* option to turn on debugging
 
 == Installation ==
 
@@ -25,7 +32,7 @@ Features include:
 
 = CSS is not displaying properly after activating the plugin. What can I do? =
 
-You can debug the plugin by activating the debug option on the settings page and reviewing the error log for details. You can try excluding certain CSS files from getting combined.
+You can debug the plugin by activating the debug option on the settings page and reviewing the server's error log for details. You can try excluding certain CSS files from getting combined to see if that fixes the issue.
 
 == Screenshots ==
 1. This is a screenshot of the Combine CSS settings page.
