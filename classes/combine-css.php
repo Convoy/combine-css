@@ -1,12 +1,12 @@
 <?php
 
-class WPCombineCSS {
+class CombineCSS {
 
         /**
         *Variables
         */
         const version = '0.1';
-	const nspace = 'wpccp';
+	const nspace = 'combine-css';
 	const pname = 'Combine CSS';
         protected $_plugin_file;
         protected $_plugin_dir;
@@ -152,9 +152,7 @@ class WPCombineCSS {
         *@since 0.1
         */
         function debug ( $msg ) {
-                if ( $this->debug ) {
-                        error_log( 'DEBUG: ' . $msg );
-                }
+                if ( $this->debug ) error_log( 'DEBUG: ' . $msg );
         }
 
 	/**
@@ -192,7 +190,6 @@ class WPCombineCSS {
 
                 // get context (plugin or theme)
 
-                // wp-content/themes/convoy-theme/style.css
                 preg_match( "/(plugins|themes)\/(.*)\/.*/", $css_src, $cmatches );
                 $context = '';
                 if ( $cmatches ) {
@@ -200,6 +197,8 @@ class WPCombineCSS {
                         if ( strstr( $context, '/' ) ) $context = dirname( $cmatches[2] );
                 }
                 $this->debug( '     -> context ' . $context );
+
+                // add this css file to the found handles if it is not to be ignored
 
 		if ( ! in_array( $context . ':' . $css_file, $this->css_files_ignore ) && ! in_array( $css_file, $this->css_files_ignore ) ) {
 
@@ -213,7 +212,7 @@ class WPCombineCSS {
 
                 // get name of file based on md5 hash of js handles
 
-                $file_name = self::nspace . '-' . md5( @implode( '', array_keys( $this->css_handles_found ) ) );
+                $file_name = md5( @implode( '', array_keys( $this->css_handles_found ) ) );
 
                 // paths to wpccp css
 
@@ -226,7 +225,9 @@ class WPCombineCSS {
 		// add gravity forms css, if told to
 
 		if ( $this->settings_data['add_gf_css'] == 'Yes' ) {
-			$this->css_handles_found['/wp-content/plugins/gravityforms/css/forms.css']['css_file'] = $this->get_file_from_src( '/wp-content/plugins/gravityforms/css/forms.css' );
+                        $gf_src = $this->strip_domain( plugins_url( 'css/forms.css', 'gravityforms' ) );
+                        $gf_file = $this->get_file_from_src( $gf_src );
+			$this->css_handles_found[$gf_src]['css_file'] = $gf_file;
 		}
 
                 if ( $this->css_handles_found[$css_src] ) {}

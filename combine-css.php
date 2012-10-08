@@ -1,10 +1,10 @@
 <?php
 /*
-Plugin Name: WP Combine CSS Plugin
+Plugin Name: Combine CSS
 Plugin URI: http://www.weareconvoy.com
-Description: WordPress plugin that combines, minifies, and compresses CSS files
+Description: WordPress plugin that combines, minifies, and compresses CSS files.
 Author: Convoy
-Version: 0.11
+Version: 0.1
 Author: Tim McDaniels
 Author URI: http://www.weareconvoy.com
 Requires at least: 3.0.0
@@ -35,10 +35,10 @@ if ( preg_match( '#' . basename( __FILE__ ) . '#', $_SERVER['PHP_SELF'] ) ) die(
 
 // require base objects and do instantiation
 
-if ( !class_exists( 'WPCombineCSS' ) ) {
+if ( !class_exists( 'CombineCSS' ) ) {
         require_once( dirname( __FILE__ ) . '/classes/combine-css.php' );
 }
-$wp_combine_css = new WPCombineCSS();
+$wp_combine_css = new CombineCSS();
 
 // define plugin file path
 

@@ -3,12 +3,12 @@ Contributors: timmcdaniels
 Donate link: http://WeAreConvoy.com
 Tags: CSS, gzip
 Requires at least: 3.0.1
-Tested up to: 3.4
+Tested up to: 3.4.2
 Stable tag: 0.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-WordPress plugin that combines, minifies, and compresses CSS files
+WordPress plugin that combines, minifies, and compresses CSS files.
 
 == Description ==
 
